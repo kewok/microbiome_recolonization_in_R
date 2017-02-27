@@ -6,7 +6,7 @@ plot_host <- function(init_host_matrix, antimicrobe_host_matrix, final_host_matr
 	par(mfrow=my_margins,oma=c(0,0,0,0),pty="s")
 	lbls <- paste("Microbe", 1:5)
 	pie(init_host_matrix[,j], labels=lbls, col=colorplot, main=paste("Host",j,"before treatment"))
-	pie(antimicrobe_host_matrix[,j], labels=lbls, col=colorplot, main=paste("Host",j,"during treatment"))
+	pie(c(antimicrobe_host_matrix[,j],sum(init_host_matrix[,j])-sum(antimicrobe_host_matrix[,j])), labels=c(lbls, "vacant\n niche space"), col=c(colorplot,"WHITE"), main=paste("Host",j,"during treatment"))
 	pie(final_host_matrix[,j], labels=lbls, col=colorplot, main=paste("Host",j,"after treatment"))
 	}
 

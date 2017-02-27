@@ -1,48 +1,65 @@
-source("SamplingFunction.R")
-
-number_of_colors <- 5
-new_population_size <- 24
-# A function that simulates genetic drift by repopulating the list of letters every generation. The inputs are the number of generations over which genetic drift is simulated, and the output is a plot of the change in the frequency of a given letter.
+# Simulate microbiome dynamics after antimicrobial perturbation. The inputs are the number of hosts, the starting proportion of bugs, and the output is a series of plots about the effects of the antmicrobial community dynamics.
 
 COLORS <- c("GREEN", "ORANGE", "YELLOW", "RED", "WHITE")
 colorplot <- c("green", "orange", "yellow", "red", "grey")
 
-simulate_drift <- function(num_its)
+simulate_setup <- function(N_hosts, num_bugs, starting_proportion)
 	{
-	new_colors <- COLORS
-	cat("First generation:", rep(new_colors, each=new_population_size/number_of_colors), "\n")
-	# Store the output of the simulation:
-	result <- matrix(nrow=num_its,ncol=new_population_size)
-	for (i in 1:num_its)
+	# Make proportions into true probabilities so they sum to one:
+	starting_proportion <- starting_proportion/sum(starting_proportion) 
+	return(rmultinom(n=N_hosts, size=num_bugs, prob=starting_proportion))
+	}
+
+kill_bugs <- function(bug_densities, bug_susceptibilities)
+	{
+	surviving_bug_densities <- numeric()
+	for (i in 1:length(bug_densities))
 		{
-		otcm <- sample_3(rep(new_colors,each=new_population_size/number_of_colors), i, print_result=F)
-		new_colors <- rep(otcm, each=new_population_size/length(COLORS))
-		result[i,] <- new_colors
-		cat("New generation:", new_colors,"\n")
+		surviving_bug_densities[i] <- rbinom(1, bug_densities[i], bug_susceptibilities[i])
 		}
+	return(surviving_bug_densities)
+	}
 
-	color_counts <- matrix(nrow=num_its, ncol=number_of_colors)
-	for (i in 1:num_its)
+simulate_antimicrobial <- function(host_matrix, bug_susceptibilities)
+	{
+	ans_matrix <- host_matrix
+	if (length(bug_susceptibilities) != nrow(ans_matrix))
 		{
-		for (j in 1:number_of_colors)
-			{
-			color_counts[i,j] <- sum(result[i,]==COLORS[j])
-			}
+		print("You have different numbers of susceptibilities and microbe types!")
+		return(0)
 		}
-
-	viable_colors <- COLORS[which(color_counts[1,]>0)]
-	plotcols <- colorplot[which(color_counts[1,]>0)]
-
-	plot(color_counts[,which(color_counts[1,]>0)[1]]/new_population_size,xlab="Generation #", ylab="Frequency of randomly chosen colors",ylim=c(0,1),main="",xlim=c(0,num_its),col=plotcols[1])
-	par(xpd=TRUE)
-	legend(num_its/2, 1.21, viable_colors,lwd=c(2,2,2),pch=c(1,19,8),lty=c(1,2,3), seg.len=7.5, col=plotcols)
-	lines(color_counts[,which(color_counts[1,]>0)[1]]/new_population_size,lwd=2,col=plotcols[1])
-
-	points(color_counts[,which(color_counts[1,]>0)[2]]/new_population_size,lwd=2,pch=19,col=plotcols[2])
-	lines(color_counts[,which(color_counts[1,]>0)[2]]/new_population_size,lwd=2,lty=2, col=plotcols[2])
-	if (length(viable_colors) > 2)
+	for (j in 1:ncol(host_matrix))
 		{
-		points(color_counts[,which(color_counts[1,]>0)[3]]/new_population_size,lwd=2,pch=8,col=plotcols[3])
-		lines(color_counts[,which(color_counts[1,]>0)[3]]/new_population_size,lwd=2,lty=3, col=plotcols[3])
+		ans_matrix[,j] <- kill_bugs(ans_matrix[,j], bug_susceptibilities)
 		}
+	return(ans_matrix)
+	}
+
+#repopulate_bugs <- function(bug_densities, bug_growth_rates, num_bugs, starting_proportion)
+repopulate_bugs <- function(bug_densities, bug_growth_rates, num_bugs)
+	{
+	# For now, assume that the fastest growing bug crowds out the other bugs, rather than direct competition effects (e.g., something like bacterial toxins where bug A kills bug B cells); these could potentially be incorporated into an alternative repopulate_bugs function
+	survivors <- ifelse(bug_densities > 0, 1, 0)
+#	if (sum(survivors)==0)
+#		{
+#		# If microbiome is extinct, recover stochastically to initial densities; skip this step to have the recolonization occur in proportion to the relative growth rates
+#		return(rmultinom(1, num_bugs, starting_proportion))
+#		}
+#	else
+#		{
+		# Assume that the relative proportion of new bugs is proportional to their relative recovery rates
+		new_bug_recovery_proportions <- (survivors*bug_growth_rates)/sum(survivors*bug_growth_rates)
+		bug_densities <- bug_densities + rmultinom(1, size = num_bugs-sum(bug_densities),  new_bug_recovery_proportions)
+#		}
+	return(bug_densities)
+	}
+
+simulate_recolonization <- function(host_matrix,  bug_growth_rates, num_bugs)
+	{
+	ans_matrix <- host_matrix
+	for (j in 1:ncol(ans_matrix))
+		{
+		ans_matrix[,j] <- repopulate_bugs(ans_matrix[,j], bug_growth_rates, num_bugs)
+		}
+	return(ans_matrix)
 	}

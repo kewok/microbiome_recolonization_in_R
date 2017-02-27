@@ -35,22 +35,12 @@ simulate_antimicrobial <- function(host_matrix, bug_susceptibilities)
 	return(ans_matrix)
 	}
 
-#repopulate_bugs <- function(bug_densities, bug_growth_rates, num_bugs, starting_proportion)
 repopulate_bugs <- function(bug_densities, bug_growth_rates, num_bugs)
 	{
 	# For now, assume that the fastest growing bug crowds out the other bugs, rather than direct competition effects (e.g., something like bacterial toxins where bug A kills bug B cells); these could potentially be incorporated into an alternative repopulate_bugs function
 	survivors <- ifelse(bug_densities > 0, 1, 0)
-#	if (sum(survivors)==0)
-#		{
-#		# If microbiome is extinct, recover stochastically to initial densities; skip this step to have the recolonization occur in proportion to the relative growth rates
-#		return(rmultinom(1, num_bugs, starting_proportion))
-#		}
-#	else
-#		{
-		# Assume that the relative proportion of new bugs is proportional to their relative recovery rates
-		new_bug_recovery_proportions <- (survivors*bug_growth_rates)/sum(survivors*bug_growth_rates)
-		bug_densities <- bug_densities + rmultinom(1, size = num_bugs-sum(bug_densities),  new_bug_recovery_proportions)
-#		}
+	new_bug_recovery_proportions <- (survivors*bug_growth_rates)/sum(survivors*bug_growth_rates)
+	bug_densities <- bug_densities + rmultinom(1, size = num_bugs-sum(bug_densities),  new_bug_recovery_proportions)
 	return(bug_densities)
 	}
 
